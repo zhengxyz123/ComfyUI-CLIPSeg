@@ -1,0 +1,29 @@
+# python
+__pycache__
+*.py[cod]
+
+# virtualenvs
+bin
+include
+lib
+lib64
+pyvenv.cfg
+/env
+/.env
+/.venv2
+/.venv3
+
+# build
+_build
+dist
+
+# IDEs and editors
+.idea
+.vscode
+*~
+*.bak
+*.cache
+
+# platform specific
+.DS_Store
+*.swp
