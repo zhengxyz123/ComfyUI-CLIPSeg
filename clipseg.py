@@ -78,6 +78,7 @@ class CLIPSegText:
         for i in range(len(prompts)):
             tensor += torch.sigmoid(preds[i][0])
 
+        # do not ask why it's not `tensor > threshold`
         tensor = torch.where(tensor > threshold**2, 1.0, 0.0)
         tensor = image2tensor(
             tensor2image(tensor).filter(ImageFilter.GaussianBlur(blur_radius))
@@ -107,10 +108,7 @@ class CLIPSegImage:
     @classmethod
     def INPUT_TYPES(cls):
         return {
-            "required": {
-                "image": ("IMAGE",),
-                "prompt": ("IMAGE",)
-            },
+            "required": {"image": ("IMAGE",), "prompt": ("IMAGE",)},
             "optional": {
                 "blur_radius": (
                     "FLOAT",
@@ -124,19 +122,27 @@ class CLIPSegImage:
         }
 
     def segment_image(
-        self, image: torch.Tensor, prompt: torch.Tensor, blur_radius: float, threshold: float
+        self,
+        image: torch.Tensor,
+        prompt: torch.Tensor,
+        blur_radius: float,
+        threshold: float,
     ) -> Tuple[torch.Tensor]:
         original_img = tensor2image(image)
-        input_image = self.processor(
-            images=[original_img], return_tensors="pt"
+        input_image = self.processor(images=[original_img], return_tensors="pt")
+        prompt_image = self.processor(
+            images=[tensor2image(prompt)], return_tensors="pt"
         )
-        prompt_image = self.processor(images=[tensor2image(prompt)], return_tensors="pt")
 
         with torch.no_grad():
-            outputs = self.model(**input_image, conditional_pixel_values=prompt_image.pixel_values)
+            outputs = self.model(
+                **input_image, conditional_pixel_values=prompt_image.pixel_values
+            )
         preds = outputs.logits.unsqueeze(1)
-        tensor = torch.sigmoid(preds[0][0])
+        preds = torch.transpose(preds, 0, 1)
+        tensor = torch.sigmoid(preds[0])
 
+        # do not ask why it's not `tensor > threshold`
         tensor = torch.where(tensor > threshold**2, 1.0, 0.0)
         tensor = image2tensor(
             tensor2image(tensor).filter(ImageFilter.GaussianBlur(blur_radius))
@@ -151,4 +157,9 @@ class CLIPSegImage:
         return (image2tensor(output_img),)
 
 
-NODE_CLASS_MAPPINGS = {"CLIPSeg (Text)": CLIPSegText, "CLIPSeg (Image)": CLIPSegImage}
+NODE_CLASS_MAPPINGS = {"CLIPSegText": CLIPSegText, "CLIPSegImage": CLIPSegImage}
+
+NODE_DISPLAY_NAME_MAPPINGS = {
+    "CLIPSegText": "CLIPSeg (Text)",
+    "CLIPSegImage": "CLIPSeg (Image)",
+}
