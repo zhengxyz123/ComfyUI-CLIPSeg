@@ -31,7 +31,7 @@ def image2tensor(image: Image.Image) -> torch.Tensor:
     return ToTensor()(image)
 
 
-class CLIPSeg:
+class CLIPSegText:
     CATEGORY = "mask"
     RETURN_TYPES = ("MASK",)
     RETURN_NAMES = ("MASK",)
@@ -92,4 +92,63 @@ class CLIPSeg:
         return (image2tensor(output_img),)
 
 
-NODE_CLASS_MAPPINGS = {"CLIPSeg": CLIPSeg}
+class CLIPSegImage:
+    CATEGORY = "mask"
+    RETURN_TYPES = ("MASK",)
+    RETURN_NAMES = ("MASK",)
+    FUNCTION = "segment_image"
+
+    def __init__(self) -> None:
+        self.processor = AutoProcessor.from_pretrained("CIDAS/clipseg-rd64-refined")
+        self.model = CLIPSegForImageSegmentation.from_pretrained(
+            "CIDAS/clipseg-rd64-refined"
+        )
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "image": ("IMAGE",),
+                "prompt": ("IMAGE",)
+            },
+            "optional": {
+                "blur_radius": (
+                    "FLOAT",
+                    {"min": 0, "max": 10, "step": 0.5, "default": 5.0},
+                ),
+                "threshold": (
+                    "FLOAT",
+                    {"min": 0, "max": 1, "step": 0.01, "default": 0.5},
+                ),
+            },
+        }
+
+    def segment_image(
+        self, image: torch.Tensor, prompt: torch.Tensor, blur_radius: float, threshold: float
+    ) -> Tuple[torch.Tensor]:
+        original_img = tensor2image(image)
+        input_image = self.processor(
+            images=[original_img], return_tensors="pt"
+        )
+        prompt_image = self.processor(images=[tensor2image(prompt)], return_tensors="pt")
+
+        with torch.no_grad():
+            outputs = self.model(**input_image, conditional_pixel_values=prompt_image.pixel_values)
+        preds = outputs.logits.unsqueeze(1)
+        tensor = torch.sigmoid(preds[0][0])
+
+        tensor = torch.where(tensor > threshold**2, 1.0, 0.0)
+        tensor = image2tensor(
+            tensor2image(tensor).filter(ImageFilter.GaussianBlur(blur_radius))
+        )
+        tensor = torch.where(tensor > 0, 1.0, 0.0)
+        output_img = tensor2image(tensor)
+        output_img = output_img.resize(
+            (original_img.width, original_img.height),
+            resample=Image.Resampling.BILINEAR,
+        )
+
+        return (image2tensor(output_img),)
+
+
+NODE_CLASS_MAPPINGS = {"CLIPSeg (Text)": CLIPSegText, "CLIPSeg (Image)": CLIPSegImage}

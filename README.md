@@ -1,6 +1,6 @@
 # ComfyUI-CLIPSeg
 
-Using [CLIPSeg model](https://huggingface.co/docs/transformers/main/en/model_doc/clipseg) to generate masks for image inpainting tasks based on text prompts.
+Using [CLIPSeg model](https://huggingface.co/docs/transformers/main/en/model_doc/clipseg) to generate masks for image inpainting tasks based on text or image prompts.
 
 ![Usage of ComfyUI-CLIPSeg](example.png)
 
@@ -20,18 +20,14 @@ Using [CLIPSeg model](https://huggingface.co/docs/transformers/main/en/model_doc
 
 3. Restart ComfyUI.
 
-The plugin will automatically download the [CIDAS/clipseg-rd64-refined](https://huggingface.co/CIDAS/clipseg-rd64-refined) model from Hugging Face the first time you use it.
+The plugin will automatically download the [CIDAS/clipseg-rd64-refined](https://huggingface.co/CIDAS/clipseg-rd64-refined) model on first use.
 
 If you have installed ComfyUI properly then there is no need to install any additional dependencies.
 
 ## Usage
 
-Once installed, you'll find a new node called `CLIPSeg` under the `mask` category in ComfyUI.
+After installation, find the new nodes under the `mask` category in ComfyUI:
 
-First, drag and drop the `CLIPSeg` node into your workflow.
+- **CLIPSeg (Text)**: Enter one or more prompts separated by commas.
 
-In the text input field, enter your desired prompts. You can specify multiple elements separated by commas.
-
-Then connect the node to your image input (e.g., Load Image, Inpainting Pipeline).
-
-Run the workflow and a binary mask based on your text description will be generated.
+- **CLIPSeg (Image)**: Connect your input image and a reference image as prompt.
